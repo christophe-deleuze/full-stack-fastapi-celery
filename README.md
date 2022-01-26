@@ -5,6 +5,10 @@ Ce projet présente une stack complète composée d'une API REST (FastAPI) et d'
 L'objectif de ce projet est didactique : monitoring, tests, métriques, documentation et bonnes pratiques sont disséminées partout.
 Prenez le temps de regarder chaque fichier pour comprendre comment l'ensemble des services interagissent entre eux.
 
+Voici un aperçu visuel du projet :
+
+[![Project docs](img/project-architecture.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
+
 La stack comprend :
  - Prometheus: Collecte de métriques ;
  - Grafana: Visualisation des métriques collectées par prometheus ;
