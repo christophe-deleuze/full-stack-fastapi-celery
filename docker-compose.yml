@@ -1,0 +1,311 @@
+version: "3.8"
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  postgres_data:
+  pgadmin_data:
+  flower_data:
+
+networks:
+  front-tier:
+  back-tier:
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.1.0
+    hostname: prometheus
+    container_name: prometheus
+    volumes:
+      - prometheus_data:/prometheus
+      - ./prometheus/:/etc/prometheus/
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - 9090:9090
+    links:
+      - cadvisor:cadvisor
+      - alertmanager:alertmanager
+      #- pushgateway:pushgateway
+    networks:
+      - back-tier
+    depends_on:
+      - cadvisor
+      #- pushgateway
+    restart: always
+  
+  node-exporter:
+    image: prom/node-exporter
+    hostname: node-exporter
+    container_name: node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command: 
+      - '--path.procfs=/host/proc' 
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    ports:
+      - 9100:9100
+    networks:
+      - back-tier
+    restart: always
+    deploy:
+      mode: global
+  
+  alertmanager:
+    image: prom/alertmanager
+    hostname: alertmanager
+    container_name: alertmanager
+    ports:
+      - 9093:9093
+    volumes:
+      - ./alertmanager/:/etc/alertmanager/
+    networks:
+      - back-tier
+    restart: always
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+  
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    hostname: cadvisor
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - 8080:8080
+    networks:
+      - back-tier
+    restart: always
+    deploy:
+      mode: global
+  
+  grafana:
+    image: grafana/grafana
+    hostname: grafana
+    container_name: grafana
+    user: "472"
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    env_file:
+      - ./grafana/config.monitoring
+    networks:
+      - back-tier
+      - front-tier
+    depends_on:
+      - prometheus
+    restart: always
+  
+  postgres:
+    image: postgres
+    hostname: postgres
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql # copy the sql script to create tables
+    ports:
+      - 5432:5432
+    networks:
+      - back-tier
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "postgres", "-U", "postgres" ]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+    restart: unless-stopped
+  
+  postgres-exporter:
+    image: bitnami/postgres-exporter:latest
+    hostname: postgres-exporter
+    container_name: postgres-exporter
+    environment:
+      DATA_SOURCE_URI: postgres:5432/postgres?sslmode=disable
+      DATA_SOURCE_USER: postgres
+      DATA_SOURCE_PASS: postgres
+    ports:
+      - 9187:9187
+    networks:
+      - back-tier
+    depends_on:
+      - postgres
+    restart: always
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    hostname: pgadmin
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user@domain.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - 5050:80
+    networks:
+      - back-tier
+    depends_on:
+      - postgres
+    restart: unless-stopped
+  
+  #pushgateway:
+  #  image: prom/pushgateway
+  #  restart: always
+  #  expose:
+  #    - 9091
+  #  ports:
+  #    - 9091:9091
+  #  networks:
+  #    - back-tier
+  
+  #elasticsearch:
+  #  image: elasticsearch:7.16.2
+  #  hostname: elasticsearch
+  #  container_name: elasticsearch
+  #  networks:
+  #    - back-tier
+  
+  #kibana:
+  #  image: kibana:7.16.2
+  #  hostname: kibana
+  #  container_name: kibana
+  #  environment:
+  #    ELASTICSEARCH_URL: http://elasticsearch:9200
+  #  networks:
+  #    - back-tier
+  #  depends_on:
+  #    - elasticsearch
+  
+  # 
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: rabbitmq
+    container_name: rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+    networks:
+      - back-tier
+  
+  redis:
+    image: redis:latest
+    hostname: redis
+    container_name: redis
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - 6379:6379
+    networks:
+      - back-tier
+  
+  redis-exporter:
+    image: bitnami/redis-exporter:latest
+    hostname: redis-exporter
+    container_name: redis-exporter
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    ports:
+      - 9121:9121
+    networks:
+      - back-tier
+    depends_on:
+      - redis
+    restart: always
+  
+  flower:
+    build:
+      context: ./flower
+    hostname: flower
+    container_name: flower
+    command: [
+      "celery", 
+      "--broker=pyamqp://guest:guest@rabbitmq:5672//", 
+      "flower", 
+      "--broker-api=http://guest:guest@rabbitmq:15672/api/", 
+      "--backend=redis://redis:6379/0", 
+      "--port=5555", 
+      "--persistent=True", 
+      "--db=/var/flower.db"]
+    ports:
+      - 5555:5555
+    volumes:
+      - flower_data:/var/
+    networks:
+      - back-tier
+    depends_on:
+      - rabbitmq
+      - redis
+  
+  project-api:
+    build:
+      context: ./project-api
+    hostname: project-api
+    container_name: project-api
+    command: [
+      "uvicorn", 
+      "api:app", 
+      "--host", 
+      "0.0.0.0", 
+      "--port", 
+      "5000", 
+      "--workers", 
+      "2", 
+      "--log-level", 
+      "info"]
+    environment:
+      POSTGRES_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres/postgres
+      CELERY_BROKER_URL: pyamqp://guest:guest@rabbitmq:5672//
+      CELERY_RESULT_BACKEND_URL: redis://redis:6379/0 
+    ports:
+      - 5000:5000
+    networks:
+      - back-tier
+      - front-tier
+    depends_on:
+      - rabbitmq
+      - redis
+  
+  project-worker:
+    build:
+      context: ./project-worker
+    hostname: project-worker
+    container_name: project-worker
+    command: [
+      "celery", 
+      "-A", 
+      "tasks:app", 
+      "worker", 
+      "--pool", 
+      "prefork", 
+      "-Q", 
+      "project-worker", 
+      "--concurrency=2", 
+      "-n", 
+      "project-worker@%h",  
+      "--loglevel", 
+      "INFO"]
+    environment:
+      CELERY_BROKER_URL: pyamqp://guest:guest@rabbitmq:5672//
+      CELERY_RESULT_BACKEND_URL: redis://redis:6379/0 
+    networks:
+      - back-tier
+    depends_on:
+      - rabbitmq
+      - redis

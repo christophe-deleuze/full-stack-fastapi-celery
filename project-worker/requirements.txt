@@ -1,0 +1,4 @@
+rabbitmq==0.2.0
+redis==4.1.1
+celery==5.2.3
+pydantic==1.9.0
