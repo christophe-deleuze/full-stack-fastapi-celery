@@ -12,15 +12,15 @@ Voici un aperçu visuel du projet :
 La stack comprend :
  - Prometheus: Collecte de métriques ;
  - Grafana: Visualisation des métriques collectées par prometheus ;
- - cAdvisor: Monitoring des ressources machines ;
- - PostgreSQL: Base de données ;
+ - Node-Exporter: Exporte des métriques de la machine vers Prometheus ;
+ - PostgreSQL: Base de données relationnelle ;
  - postgres-exporter: Exporte des métriques de PostgreSQL vers Prometheus ;
- - pgAdmin: Administration de la base de données ;
- - RabbitMQ: Broker pour les tâches Celery (RabbitMQ met à disposition nativement ses métriques pour Prometheus ;
+ - pgAdmin: Administration de la base de données relationnelle ;
+ - RabbitMQ: Broker pour les tâches Celery (RabbitMQ met à disposition nativement ses métriques pour Prometheus) ;
  - Redis: Result Backend utilisé pour stocker en mémoire les résultats de tâches Celery ;
  - redis-exporter: Exporte des métriques de Redis vers Prometheus ;
  - project-api (FastAPI): Framework utilisé pour construire une API REST entièrement asynchrone, l'export des métriques est assuré par l'api elle-même ;
- - project-worker (Celery): Gestionnaire de tâche asynchrone ;
+ - project-worker (Celery): Tâches Celery ;
  - Flower: Monitoring de base des workers et tâches celery, ainsi qu'export de métriques pour Prometheus.
 
 Ils ne sont pas encore intégrés :

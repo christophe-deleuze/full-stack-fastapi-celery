@@ -1,140 +1,140 @@
 version: "3.8"
 
 volumes:
-  prometheus_data:
-  grafana_data:
-  postgres_data:
-  pgadmin_data:
-  flower_data:
+  prometheus-data:
+  grafana-data:
+  postgres-data:
+  pgadmin-data:
+  flower-data:
 
 networks:
   front-tier:
   back-tier:
 
 services:
+  
+  ####################################
+  # Prometheus enregistre des métriques en temps réel dans une base de données de séries temporelles.
+  # Pour enregistrer les métrique, Prometheus se base sur le contenu de point d'entrée exposé à l'aide du protocole HTTP (/metrics).
+  # Son rôle est de collecter les métriques de chaque service.
+  # 
   prometheus:
-    image: prom/prometheus:v2.1.0
+    image: prom/prometheus:latest
     hostname: prometheus
     container_name: prometheus
+    deploy:
+      replicas: 1
     volumes:
-      - prometheus_data:/prometheus
-      - ./prometheus/:/etc/prometheus/
+      - prometheus-data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alertmanager/alert.rules/alerts.rules.yml:/alertmanager/alert.rules/alerts.rules.yml
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=365d'
     ports:
       - 9090:9090
-    links:
-      - cadvisor:cadvisor
-      - alertmanager:alertmanager
-      #- pushgateway:pushgateway
     networks:
       - back-tier
-    depends_on:
-      - cadvisor
-      #- pushgateway
     restart: always
   
-  node-exporter:
-    image: prom/node-exporter
+  ####################################
+  # Exporte les métriques de la machine
+  # 
+  node_exporter:
+    image: prom/node-exporter:latest
     hostname: node-exporter
     container_name: node-exporter
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command: 
-      - '--path.procfs=/host/proc' 
-      - '--path.sysfs=/host/sys'
-      - --collector.filesystem.ignored-mount-points
-      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    deploy:
+      replicas: 1
     ports:
       - 9100:9100
     networks:
       - back-tier
     restart: always
-    deploy:
-      mode: global
   
+  ####################################
+  # Gestionnaire d'alertes
+  # 
   alertmanager:
-    image: prom/alertmanager
+    image: prom/alertmanager:latest
     hostname: alertmanager
     container_name: alertmanager
+    deploy:
+      replicas: 1
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./alertmanager/templates/default.tmpl:/etc/alertmanager/templates/default.tmpl
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
     ports:
       - 9093:9093
-    volumes:
-      - ./alertmanager/:/etc/alertmanager/
     networks:
       - back-tier
     restart: always
-    command:
-      - '--config.file=/etc/alertmanager/config.yml'
-      - '--storage.path=/alertmanager'
   
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor
-    hostname: cadvisor
-    container_name: cadvisor
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    ports:
-      - 8080:8080
-    networks:
-      - back-tier
-    restart: always
-    deploy:
-      mode: global
-  
+  ####################################
+  # Permet la visualisation de données. Il permet de réaliser des tableaux de bord et des graphiques depuis plusieurs sources dont des bases de données temporelles 
+  # Monitoring des métriques
+  # 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:latest
     hostname: grafana
     container_name: grafana
-    user: "472"
+    deploy:
+      replicas: 1
+    environment:
+      - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
     ports:
       - 3000:3000
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning/:/etc/grafana/provisioning/
-    env_file:
-      - ./grafana/config.monitoring
     networks:
       - back-tier
-      - front-tier
     depends_on:
       - prometheus
     restart: always
   
+  ####################################
+  # Base de donnée relationnelle
+  # 
   postgres:
-    image: postgres
+    image: postgres:latest
     hostname: postgres
     container_name: postgres
+    deploy:
+      replicas: 1
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
       - ./postgres/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql # copy the sql script to create tables
-    ports:
-      - 5432:5432
-    networks:
-      - back-tier
     healthcheck:
       test: [ "CMD", "pg_isready", "-q", "-d", "postgres", "-U", "postgres" ]
       timeout: 45s
       interval: 10s
       retries: 10
+    ports:
+      - 5432:5432
+    networks:
+      - back-tier
     restart: unless-stopped
   
+  ####################################
+  # Exporte des métriques de la base de données
+  # 
   postgres-exporter:
     image: bitnami/postgres-exporter:latest
     hostname: postgres-exporter
     container_name: postgres-exporter
+    deploy:
+      replicas: 1
     environment:
       DATA_SOURCE_URI: postgres:5432/postgres?sslmode=disable
       DATA_SOURCE_USER: postgres
@@ -147,16 +147,21 @@ services:
       - postgres
     restart: always
   
+  ####################################
+  # Administration de la base de donnée relationnelle
+  # 
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4:latest
     hostname: pgadmin
     container_name: pgadmin
+    deploy:
+      replicas: 1
     environment:
-      PGADMIN_DEFAULT_EMAIL: user@domain.com
+      PGADMIN_DEFAULT_EMAIL: admin@domain.com
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - pgadmin-data:/var/lib/pgadmin
     ports:
       - 5050:80
     networks:
@@ -165,56 +170,92 @@ services:
       - postgres
     restart: unless-stopped
   
+  #####################################
+  ## Service intermédiaire qui permet de collecter des métriques à partir de jobs qui ne peuvent pas être récupérés (scraped) 
+  ## 
   #pushgateway:
-  #  image: prom/pushgateway
-  #  restart: always
-  #  expose:
-  #    - 9091
+  #  image: prom/pushgateway:latest
+  #  hostname: pushgateway
+  #  container_name: pushgateway
+  #  deploy:
+  #    replicas: 1
   #  ports:
   #    - 9091:9091
   #  networks:
   #    - back-tier
+  #  restart: always
   
+  #####################################
+  ## Moteur d'indexation et d'analyse de données utilisé pour indexer les logs
+  ## 
   #elasticsearch:
-  #  image: elasticsearch:7.16.2
+  #  image: elasticsearch:latest
   #  hostname: elasticsearch
   #  container_name: elasticsearch
+  #  deploy:
+  #    replicas: 1
+  #  ports:
+  #    - 9200:9200
   #  networks:
   #    - back-tier
+  #  restart: always
   
+  #####################################
+  ## Monitoring des logs basé sur Elasticsearch
+  ## 
   #kibana:
-  #  image: kibana:7.16.2
+  #  image: kibana:latest
   #  hostname: kibana
   #  container_name: kibana
+  #  deploy:
+  #    replicas: 1
   #  environment:
   #    ELASTICSEARCH_URL: http://elasticsearch:9200
   #  networks:
   #    - back-tier
+  #  ports:
+  #    - 5601:5601
   #  depends_on:
   #    - elasticsearch
+  #  restart: always
   
+  ####################################
+  # Agent de messages pour celery (broker), il est utilisé comme middleware entre des producers et des workers
+  # Exporte ses propres métriques
   # 
   rabbitmq:
     image: rabbitmq:3-management
     hostname: rabbitmq
     container_name: rabbitmq
+    deploy:
+      replicas: 1
     ports:
       - 5672:5672
       - 15672:15672
     networks:
       - back-tier
+    restart: unless-stopped
   
+  ####################################
+  # Mémoire cache pour celery (result backend), il est utilisé comme middleware entre des producers et des workers
+  # 
   redis:
     image: redis:latest
     hostname: redis
     container_name: redis
+    deploy:
+      replicas: 1
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - 6379:6379
     networks:
       - back-tier
+    restart: unless-stopped
   
+  ####################################
+  # Exporteur des métriques redis
+  # 
   redis-exporter:
     image: bitnami/redis-exporter:latest
     hostname: redis-exporter
@@ -229,11 +270,18 @@ services:
       - redis
     restart: always
   
+  ####################################
+  # Exporteur des métriques celery & monitoring des workers
+  # 
   flower:
     build:
       context: ./flower
     hostname: flower
     container_name: flower
+    deploy:
+      replicas: 1
+    volumes:
+      - flower-data:/var/
     command: [
       "celery", 
       "--broker=pyamqp://guest:guest@rabbitmq:5672//", 
@@ -245,19 +293,26 @@ services:
       "--db=/var/flower.db"]
     ports:
       - 5555:5555
-    volumes:
-      - flower_data:/var/
     networks:
       - back-tier
     depends_on:
       - rabbitmq
       - redis
+    restart: always
   
+  ####################################
+  # API REST basée sur FastAPI
+  # Contiens :
+  # - des requêtes à la base de donnée relationnelle
+  # Producteur de tâches celery
+  # 
   project-api:
     build:
       context: ./project-api
     hostname: project-api
     container_name: project-api
+    deploy:
+      replicas: 1
     command: [
       "uvicorn", 
       "api:app", 
@@ -281,12 +336,19 @@ services:
     depends_on:
       - rabbitmq
       - redis
+    restart: always
   
+  ####################################
+  # Worker basé sur celery
+  # 2 Replicas sont créer pour la démo
+  # 
   project-worker:
     build:
       context: ./project-worker
-    hostname: project-worker
-    container_name: project-worker
+    #hostname: project-worker
+    #container_name: project-worker
+    deploy:
+      replicas: 2
     command: [
       "celery", 
       "-A", 
@@ -309,3 +371,4 @@ services:
     depends_on:
       - rabbitmq
       - redis
+    restart: always
