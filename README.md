@@ -25,7 +25,8 @@ La stack comprend :
 
 Ils ne sont pas encore intégrés :
  - Elasticsearch: Moteur d'indexation et d'analyse de données ;
- - Kibana: Outil basé sur Elasticsearch et qui sera utilisé pour visualiser et analyser des logs.
+ - Kibana: Outil basé sur Elasticsearch et qui sera utilisé pour visualiser et analyser des logs ;
+ - Projet Dash, pour exploiter l'API Rest et créer de super dashboards en python.
 
 Requirements
 ============
@@ -132,7 +133,109 @@ Roadmap
 Détails fichier par fichier du projet
 ============
 
-## app.core.config.py
+## [docker-compose.yml](docker-compose.yml)
+
+Le docker-compose est un fichier yaml qui décrit l'ensemble des micro-services ainsi que leurs relations entre eux au sein d'un même environnement.
+C'est le point d'entrée du projet. Pas de magie vaudou ici, tout est question de description. Pour maitriser un `docker-compose` il suffit de comprendre ce que l'on va décrire.
+
+Ce fichier se décompose principalement en 3 grandes sections :
+
+```
+volumes:
+
+networks:
+
+services:
+```
+
+- `volumes` décrit les volumes qui seront persistés physiquement sur la machine hôte ;
+- `networks` décrit l'architecture réseau ;
+- `services` décrit l'ensemble des services qui seront charger.
+
+#### Les `volumes` :
+
+- les données des bases de données sont persistées pour être représentatif de ce que vous auriez en production ;
+- Les données des middleware (RabbitMQ & Redis) ne sont pas persitées, mais elle pourraient l'être.
+
+#### Les `networks` :
+
+- Deux réseaux distincts ont été créé `front-tier` & `back-tier` ;
+- `front-tier` fait référence au réseau qui sera exposé à des utilisateurs tiers ;
+- `back-tier` fait référence au réseau protégé accessible qu'avec des droits très restreints ;
+- Seulement 2 services sont exposés sur le réseau `front-tier`: l'API REST (FastAPI) & le monitoring des métriques (Grafana).
+
+#### Les `services` :
+
+Par défaut, la description d'un service ne nécessite pas définir beaucoup d'informations.
+Toutefois, à des fins didactiques, chaque point important a été décrit explicitement pour faciliter la compréhension (PEP 20 : Explicit is better than implicit.).
+
+Prenons l'exemple du service `node-exporter` :
+
+```
+node-exporter:
+  image: prom/node-exporter:latest
+  hostname: node-exporter
+  container_name: node-exporter
+  deploy:
+    replicas: 1
+  ports:
+    - 9100:9100
+  networks:
+    - back-tier
+  restart: always
+```
+
+En détails :
+- `image` : Fait référence à l'image du service qui se trouve sur le [hub public de docker](https://hub.docker.com/) ;
+- `hostname` : Attribut un nom sur le réseau au service. Dans notre cas, cela illustre très bien l'utilisation d'un DNS. Le DNS permet de remplacer l'usage direct de l'IP par un nom. Utiliser un DNS est une bonne pratique qui rend résiliant aux problématiques de changement d'IP ;
+- `replicas` : Définit le nombre de répliques du service qui seront chargées dans l'environnement. Répliquer un service est une pratique courante notamment pour gérer des problématiques de charges et de backup. Les répliques s'accompagnent souvent d'outils complémentaires pour pouvoir gérer l'interraction entre les copies et la gestion dynamique du nombre de répliques. Par exemple, si le service répliqué est une API REST, la répartition des appels entre les répliques se fera à l'aide d'un LoadBalancer et la gestion dynamique du nombre de réplique (AutoScaling) sera basé sur des métriques personnalisées (I/O, cpu, mémoire, ...) ;
+- `ports` : Map l'ip Externe avec l'IP interne ;
+- `networks` : Définit les réseaux accessibles par le service.
+- `restart` : Politique de redémarrage.
+
+Evidemment, l'exemple du `node-exporter` fait référence à un service externe. Si on souhaite ajouter un service qui existe au sein du projet, il suffira de substituer la section `image` pour `context` comme dans cet exemple avec l'API REST :
+
+```
+  project-api:
+    build:
+      context: ./project-api
+    hostname: project-api
+    container_name: project-api
+    deploy:
+      replicas: 1
+    command: [
+      "uvicorn", 
+      "api:app", 
+      "--host", 
+      "0.0.0.0", 
+      "--port", 
+      "5000", 
+      "--workers", 
+      "2", 
+      "--log-level", 
+      "info"]
+    environment:
+      POSTGRES_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres/postgres
+      CELERY_BROKER_URL: pyamqp://guest:guest@rabbitmq:5672//
+      CELERY_RESULT_BACKEND_URL: redis://redis:6379/0 
+    ports:
+      - 5000:5000
+    networks:
+      - back-tier
+      - front-tier
+    depends_on:
+      - rabbitmq
+      - redis
+    restart: always
+```
+
+Pour finir, ce dernier exemple illustre parfaitement d'autres sections qui ont leur intérêt :
+- `context` : Définit la localisation service qui sera compilé avec un `Dockerfile` ;
+- `command` : Définit la commande qui sera executée au lancement du conteneur. A noter que si une commande est définie à la dernière ligne d'un `Dockerfile`, celle définit dans le docker-compose l'écrasera. Généralement, la commande définie à la fin des `Dockerfile` servira principalement pour lancer unitairement le service tandis que la commande définie dans le docker-compose sera adaptée à l'environnement ;
+- `environment` : Définit les variables d'environnement à charger dans le service. L'utilisation de variables d'environnements (à bon escient) dans les services permet une plus grande modularité des services par rapport à leur utilisation dans différents environnements.
+- `depends` : Définit la relation de dépendance du service par rapport à d'autres services.
+
+## [app.core.config.py](/app/core/config.py)
 
 Fichier de configuration qui sert à gérer les variables d'environnements.
 
@@ -155,7 +258,7 @@ Ce que l'on y met :
 - Timeout
 - ...
 
-## app.celery.async_celery.py
+## [app.celery.async_celery.py](/app/celery/async_celery.py)
 
 Celery est un framework de distribution de tâches asynchrones.
 Il faut distinguer le producer qui génère des tâches et le worker qui traite des tâches.
@@ -217,10 +320,9 @@ Bonne pratique :
 - Expirer automatiquement une requête avec un timeout et révoquer la tâche après timeout ;
 - Executer des tâches de manières asynchrone en récupérant leur UUID qui pourrait être utilisé plus tard pour récupérer le résultat ;
 
-## app.celery.schemas.py
+## [app.celery.schemas.py](/app/celery/schemas.py)
 
 Ce fichier sert à définir les schemas génériques à utiliser pour manipuler des tâches celery asynchrones.
 
 - AsyncTask est le modèle de réponse utilisé pour retourner l'id d'une tâche 
 - AsyncTaskStatus est le modèle de réponse utilisé pour retourner le status d'une tâche (id, status, result)
-
