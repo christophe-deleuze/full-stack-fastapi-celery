@@ -26,7 +26,7 @@ La stack comprend :
 Ils ne sont pas encore intégrés :
  - Elasticsearch: Moteur d'indexation et d'analyse de données ;
  - Kibana: Outil basé sur Elasticsearch et qui sera utilisé pour visualiser et analyser des logs ;
- - Projet Dash, pour exploiter l'API Rest et créer de super dashboards en python.
+ - Projet Dash: pour exploiter l'API Rest et créer de super dashboards en python.
 
 Requirements
 ============
@@ -118,9 +118,6 @@ celery -A tasks:app worker --pool prefork -Q project-worker --concurrency=1 -n w
 Roadmap
 ============
 
-- Valider le fonctionnement de l'ensemble de la solution
-- Valider tous export de métriques : api / redis / rabbitMQ / PostgreSQL
-- Valider la visualisation de métriques dans Grafana
 - Implémenter des tâches celery : avec argument / sans argument / avec une serialisation pickle
 - Implémenter 3 workflow celery : group / chain / group + chain
 - Implémenter dans l'api les endpoints pour les tâches celery unitaires
@@ -166,7 +163,7 @@ services:
 
 #### Les `services` :
 
-Par défaut, la description d'un service ne nécessite pas définir beaucoup d'informations.
+Par défaut, la description d'un service ne nécessite pas de définir beaucoup d'informations.
 Toutefois, à des fins didactiques, chaque point important a été décrit explicitement pour faciliter la compréhension (PEP 20 : Explicit is better than implicit.).
 
 Prenons l'exemple du service `node-exporter` :
@@ -193,7 +190,7 @@ En détails :
 - `networks` : Définit les réseaux accessibles par le service.
 - `restart` : Politique de redémarrage.
 
-Evidemment, l'exemple du `node-exporter` fait référence à un service externe. Si on souhaite ajouter un service qui existe au sein du projet, il suffira de substituer la section `image` pour `context` comme dans cet exemple avec l'API REST :
+Evidemment, l'exemple du `node-exporter` fait référence à un service externe. Si on souhaite ajouter un service qui existe au sein du projet, il suffira de substituer la section `image` par `context` comme dans cet exemple avec l'API REST :
 
 ```
   project-api:
@@ -322,7 +319,7 @@ Bonne pratique :
 
 ## [app.celery.schemas.py](/app/celery/schemas.py)
 
-Ce fichier sert à définir les schemas génériques à utiliser pour manipuler des tâches celery asynchrones.
+Ce fichier sert à définir les schemas de validation génériques à utiliser pour manipuler des tâches celery asynchrones.
 
 - AsyncTask est le modèle de réponse utilisé pour retourner l'id d'une tâche 
 - AsyncTaskStatus est le modèle de réponse utilisé pour retourner le status d'une tâche (id, status, result)
