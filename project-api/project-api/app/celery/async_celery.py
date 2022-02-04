@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from uuid import UUID
 from typing import Any
 from asyncio import sleep
 
 from celery import Celery
+from pydantic import UUID4
 from fastapi import HTTPException
 from celery.result import AsyncResult
 from asgiref.sync import sync_to_async
@@ -37,10 +37,10 @@ async def send_task(
         retry = settings.CELERY_SEND_TASK_RETRY, 
         retry_policy = settings.CELERY_SEND_TASK_RETRY_POLICY) 
 
-async def async_result(task_id: UUID) -> AsyncResult:
+async def async_result(task_id: UUID4) -> AsyncResult:
     """ Get an AsyncResult from a task_id """
     
-    return await sync_to_async(app.AsyncResult)(task_id)
+    return await sync_to_async(app.AsyncResult)(str(task_id))
 
 async def task_result(
     async_result: AsyncResult, 
@@ -75,19 +75,3 @@ async def task_result(
     async_result.forget()
     
     return result
-
-async def send_task_and_wait_result(
-    *args, 
-    celery_request_time_out: int = settings.CELERY_REQUEST_TIME_OUT, 
-    **kwargs) -> Any:
-    """ Send task and wait for the result, celery_request_time_out should be overwrite by using kwargs """
-    
-    return await task_result(await send_task(*args, **kwargs), celery_request_time_out)
-
-async def async_result_and_wait_result(
-    task_id: UUID, 
-    celery_request_time_out: int = settings.CELERY_REQUEST_TIME_OUT
-    ) -> Any:
-    """ Get AsyncResult from task_id and wait for the result, celery_request_time_out should be overwrite by using kwargs """
-    
-    return await task_result(await async_result(task_id), celery_request_time_out)

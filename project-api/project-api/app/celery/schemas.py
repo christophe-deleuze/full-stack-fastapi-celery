@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from uuid import UUID
-
-from pydantic import BaseModel
+from pydantic import BaseModel, UUID4
 
 
 class AsyncTask(BaseModel):
-    task_id: UUID
+    taskId: UUID4
 
 class AsyncTaskStatus(BaseModel):
-    task_id: UUID
-    task_status: str
-    task_result: bool
+    taskId: UUID4
+    taskStatus: str
