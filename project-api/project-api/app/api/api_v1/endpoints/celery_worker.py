@@ -4,10 +4,9 @@ from typing import Any, List
 
 from fastapi import APIRouter, Query
 
-
-from app.celery.schemas import AsyncTask
-from app.celery.async_celery import task_result
-from app.project_worker import send_task_integer_multiplication, send_task_integers_sum
+from app.core.celery.schemas import AsyncTask
+from app.core.celery.async_celery import task_result, task_ready
+from app.celery_worker import send_task_integer_multiplication, send_task_integers_sum
 
 
 router = APIRouter()
@@ -20,6 +19,7 @@ async def post_integer_multiplication(
     """ Send task : integer-multiplication, to project-worker and wait for the result """
     
     async_result = await send_task_integer_multiplication(integer)
+    await task_ready(async_result)
     return await task_result(async_result)
 
 @router.post("/integer-multiplication/async/", response_model = AsyncTask)
@@ -38,6 +38,7 @@ async def post_integers_sum(
     """ Send task : integers-sum, to project-worker and wait for the result """
     
     async_result = await send_task_integers_sum(integers)
+    await task_ready(async_result)
     return await task_result(async_result)
 
 @router.post("/integers-sum/async/", response_model = AsyncTask)

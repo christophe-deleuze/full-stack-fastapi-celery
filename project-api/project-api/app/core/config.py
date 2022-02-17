@@ -36,8 +36,9 @@ The project is separated in 2 parts :
 #### project-api :
 
 The API is dedicated for input data validation and tasks production.
-- Celery is not natively compatible with asyncio, then the common celery functions are wrapped in **app/celery/async_celery.py** to keep the API full async ;
-- Mapping celery tasks and fastapi endpoints is done in **/app/api/api_v1/endpoints/project_worker.py** (1 **.py** file for each specific worker project) ;
+- Celery is not natively compatible with asyncio, then the common celery functions are wrapped in **app/core/celery/async_celery.py** to keep the API full async ;
+- Mapping celery tasks and fastapi endpoints is done in **/app/api/api_v1/endpoints/celery_worker.py** (1 **.py** file for each specific worker project) ;
+- Examples of celery workflows are available in **/app/celery_workflows.py** and their endpoints are in **/app/api/api_v1/endpoints/celery_workflows.py** ;
 - 1 celery task = 1 endpoint
 - 1 workflow = 1 endpoint
 
@@ -53,7 +54,8 @@ The Celery worker project is dedicated to process tasks.
     POSTGRES_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@127.0.0.1/postgres"
     
     # FastAPI timeout for every Celery task
-    CELERY_REQUEST_TIME_OUT: int = 360
+    CELERY_TASK_READY_TIME_OUT: float = 360.0 # sec
+    CELERY_TASK_RESULT_TIME_OUT: float = 0.5 # sec
     
     # Celery parameters
     CELERY_BROKER_URL: str = 'pyamqp://guest:guest@127.0.0.1:5672//'

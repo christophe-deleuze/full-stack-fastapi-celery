@@ -10,18 +10,18 @@ Voici un aperçu visuel du projet :
 [![Project docs](img/project-architecture.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
 La stack comprend :
- - Prometheus: Collecte de métriques ;
- - Grafana: Visualisation des métriques collectées par prometheus ;
- - Node-Exporter: Exporte des métriques de la machine vers Prometheus ;
+ - Prometheus: Base de données de métriques. Elle collecte elle même les métriques de differents services ;
+ - Grafana: Monitoring des métriques collectées par prometheus ;
+ - Node-Exporter: Exporte des métriques de la machine pour Prometheus ;
  - PostgreSQL: Base de données relationnelle ;
  - postgres-exporter: Exporte des métriques de PostgreSQL vers Prometheus ;
  - pgAdmin: Administration de la base de données relationnelle ;
  - RabbitMQ: Broker pour les tâches Celery (RabbitMQ met à disposition nativement ses métriques pour Prometheus) ;
  - Redis: Result Backend utilisé pour stocker en mémoire les résultats de tâches Celery ;
- - redis-exporter: Exporte des métriques de Redis vers Prometheus ;
- - project-api (FastAPI): Framework utilisé pour construire une API REST entièrement asynchrone, l'export des métriques est assuré par l'api elle-même ;
- - project-worker (Celery): Tâches Celery ;
- - Flower: Monitoring de base des workers et tâches celery, ainsi qu'export de métriques pour Prometheus.
+ - redis-exporter: Exporte des métriques de Redis pour Prometheus ;
+ - project-api (FastAPI): API REST entièrement asynchrone (IO bound) construite à l'aide du Framework FastAPI, l'export des métriques est assuré par l'api elle-même ;
+ - project-worker (Celery): Projet contenant des tâches distribuées à l'aide du Framework Celery, très pratique pour une grande scalabilité ;
+ - Flower: Monitoring des workers et tâches celery, ainsi qu'export de métriques pour Prometheus.
 
 Ils ne sont pas encore intégrés :
  - Elasticsearch: Moteur d'indexation et d'analyse de données ;
@@ -52,8 +52,7 @@ docker-compose -p local-dev up -d
 - [RabbitMQ - queues monitoring(guest/guest)](http://127.0.0.1:15672)
 - [Prometheus - collect metrics](http://127.0.0.1:9090/)
 - [PGAdmin - Postgresql Administration (postgres/postgres/postgres)](http://127.0.0.1:5050/)
-- [cAdvisor - Ressources monitoring](http://127.0.0.1:8080/)
-- [Grafana - Services monitoring](http://127.0.0.1:8080/)
+- [Grafana - Services monitoring](http://127.0.0.1:3000/)
 
 Additionnal Informations
 ============
@@ -119,9 +118,6 @@ Roadmap
 ============
 
 - Implémenter des tâches celery : avec argument / sans argument / avec une serialisation pickle
-- Implémenter 3 workflow celery : group / chain / group + chain
-- Implémenter dans l'api les endpoints pour les tâches celery unitaires
-- Implémenter dans l'api les endpoints pour les workflow celery
 - Implémenter dans l'api une app qui fait du crud asynchrone avec PostgreSQL
 - Implémenter les tests pour l'api
 - Implémenter les tests pour le worker celery
@@ -255,7 +251,7 @@ Ce que l'on y met :
 - Timeout
 - ...
 
-## [app.celery.async_celery.py](/app/celery/async_celery.py)
+## [app.core.celery.async_celery.py](/app/core/celery/async_celery.py)
 
 Celery est un framework de distribution de tâches asynchrones.
 Il faut distinguer le producer qui génère des tâches et le worker qui traite des tâches.
@@ -283,7 +279,34 @@ Les fonctions à wrapper sont donc :
 - Celery().send_task()
 - AsyncResult.get()
 
-AsyncResult.get() étant bloquant, son appel est précédé d'une vérification en boucle couplé à un temps d'attente de type 'exponential backoff' pour vérifier cycliquement si le résultat est prêt.
+En complément du wrap des fonctions précédentes, le fichier possède une fonction qui permet d'attendre la mise à disposition d'un résultat d'une tâche distribuée avec le framework Celery. L'attente de type 'exponential backoff'.
+
+NB : AsyncResult.get() étant bloquant, un timeout est systématiquement employé avec l'appel de la méthode.
+
+Voici les deux cinématiques de tâches implémentées dans l'API:
+
+```
+##### Cinématique 'synchrone'
+# Envoi de la tâche
+async_result = await send_task(*args, **kwargs)
+# Attente du résultat
+await task_ready(async_result)
+# Récupération du résultat
+resultat = await task_result(async_result)
+
+##### Cinématique 'asynchrone'
+### Etape 1: Générer une tâche et récupérer son identifiant
+# Envoi de la tâche
+async_result = await send_task(*args, **kwargs)
+# Retourner l'UUID unique de la tâche
+task_id = async_result.id
+
+### Etape 2: Récupérer le résultat d'une tâche à partir de son identifiant
+# Attente du résultat
+async_result = await task_async_result(task_id)
+# Récupération du résultat
+resultat = await task_result(async_result)
+```
 
 Pour transformer les fonctions synchrones en fonction asynchrones, j'utilise la librairie asgiref qui est nativement disponible avec FastAPI.
 
@@ -310,16 +333,17 @@ app.conf.update(
 )
 ```
 - A chaque service autonome, sa propre file d'attente (queue). Le nom de la file d'attente sera le nom du type de service et le nom des tâches sera le nom des fonctions ;
-- NB : Le nom des tâches pourrait être précédé du nom du service pour faciliter la lecture des logs ;
+- NB : Le nom des tâches pourrait être précédé du nom du service pour faciliter la lecture des logs.
 
 Bonne pratique :
 - Définir explicitement une tâche avec son nom, sa serialisation et sa file d'attente ;
-- Expirer automatiquement une requête avec un timeout et révoquer la tâche après timeout ;
-- Executer des tâches de manières asynchrone en récupérant leur UUID qui pourrait être utilisé plus tard pour récupérer le résultat ;
+- Expirer automatiquement une tâche celery avec un timeout et révoquer la tâche après timeout ;
+- Supprimer automatiquement un résultat après récupération ;
+- Executer des tâches de manières asynchrone en récupérant leur UUID qui pourrait être utilisé plus tard pour récupérer le résultat.
 
-## [app.celery.schemas.py](/app/celery/schemas.py)
+## [app.core.celery.schemas.py](/app/core/celery/schemas.py)
 
 Ce fichier sert à définir les schemas de validation génériques à utiliser pour manipuler des tâches celery asynchrones.
 
-- AsyncTask est le modèle de réponse utilisé pour retourner l'id d'une tâche 
-- AsyncTaskStatus est le modèle de réponse utilisé pour retourner le status d'une tâche (id, status, result)
+- AsyncTask est le modèle de réponse utilisé pour retourner l'id d'une tâche ;
+- AsyncTaskStatus est le modèle de réponse utilisé pour retourner le status d'une tâche (id, status, result).

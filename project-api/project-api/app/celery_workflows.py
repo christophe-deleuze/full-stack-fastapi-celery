@@ -1,35 +1,61 @@
 # -*- coding: utf-8 -*-
 
-from celery import group, chain
 from celery.result import AsyncResult
+from celery import group, chain, signature, chord
 
-from app.project_worker import signature_integer_multiplication, signature_integers_sum
+from app.core.config import settings
 
 
-def chain_integer_multiplication(
+async def chain_integers_multiplication(
     integer: int, 
     nb_chains: int) -> AsyncResult:
     """ Launch x tasks in chain """
     
     # Define the initial task with explicit arg
-    initial_task = signature_integer_multiplication(integer)
+    initial_task = signature(
+        "integer-multiplication", 
+        args = (integer,), 
+        serializer = "json").set(queue=settings.PROJECT_WORKER_QUEUE)
     
     # Define the chain task without arg, because arg should be feed by the previous task
-    chain_tasks = (signature_integer_multiplication,)*nb_chains
+    chain_tasks = (
+        signature(
+        "integer-multiplication", 
+        serializer = "json").set(queue=settings.PROJECT_WORKER_QUEUE),
+        )*nb_chains
     
     # Chain all tasks and return AsyncResult
     return chain(initial_task, *chain_tasks)()
 
-def group_integer_multiplication_and_chain_sum(
+async def group_integers_multiplication(
+    integer: int, 
+    nb_groups: int) -> AsyncResult:
+    """ Launch x parallel tasks then  return list results """
+    
+    # Define the signatures of same individuals tasks (Pack in a tuple)
+    group_tasks = (signature(
+        "integer-multiplication", 
+        args = (integer,), 
+        serializer = "json").set(queue=settings.PROJECT_WORKER_QUEUE),)*nb_groups
+    
+    # Unpack all singles tasks in group, then pass all results to the final task (chain) which return an AsyncResult
+    return group(group_tasks)()
+
+async def chord_integers_multiplication(
     integer: int, 
     nb_groups: int) -> AsyncResult:
     """ Launch x parallel tasks then sum all the results """
     
     # Define the signatures of same individuals tasks (Pack in a tuple)
-    group_tasks = (signature_integer_multiplication(integer),)*nb_groups
+    group_tasks = (signature(
+        "integer-multiplication", 
+        args = (integer,), 
+        serializer = "json").set(queue=settings.PROJECT_WORKER_QUEUE),)*nb_groups
     
-    # Define the signature of the final task which should be the sum
-    final_task = signature_integers_sum
+    # Define the signature of the final task (without args) which should be the sum
+    final_task = signature(
+        "integers-sum", 
+        serializer = "json").set(queue=settings.PROJECT_WORKER_QUEUE)
     
     # Unpack all singles tasks in group, then pass all results to the final task (chain) which return an AsyncResult
-    return chain(group(*group_tasks), final_task)()
+    return chord(group_tasks, final_task)()
