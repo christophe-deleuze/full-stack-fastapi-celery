@@ -251,7 +251,7 @@ Ce que l'on y met :
 - Timeout
 - ...
 
-## [app.core.celery.async_celery.py](/app/core/celery/async_celery.py)
+## [app.core.celery.async_celery.py](project-api/project-api/app/core/celery/async_celery.py)
 
 Celery est un framework de distribution de tâches asynchrones.
 Il faut distinguer le producer qui génère des tâches et le worker qui traite des tâches.
@@ -341,7 +341,7 @@ Bonne pratique :
 - Supprimer automatiquement un résultat après récupération ;
 - Executer des tâches de manières asynchrone en récupérant leur UUID qui pourrait être utilisé plus tard pour récupérer le résultat.
 
-## [app.core.celery.schemas.py](/app/core/celery/schemas.py)
+## [app.core.celery.schemas.py](project-api/project-api/app/core/celery/schemas.py)
 
 Ce fichier sert à définir les schemas de validation génériques à utiliser pour manipuler des tâches celery asynchrones.
 
