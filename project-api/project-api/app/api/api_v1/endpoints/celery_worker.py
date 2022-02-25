@@ -5,9 +5,8 @@ from typing import Any, List
 from fastapi import APIRouter, Query
 
 from app.core.celery.schemas import AsyncTask
-from app.core.celery.async_celery import task_result, task_ready
-from app.celery_worker import send_task_integer_multiplication, send_task_integers_sum
-
+from app.core.celery.responses import task_sync_response, task_async_response
+from app.celery_worker import send_task_integers_sum, send_task_integer_multiplication 
 
 router = APIRouter()
 
@@ -19,8 +18,7 @@ async def post_integer_multiplication(
     """ Send task : integer-multiplication, to project-worker and wait for the result """
     
     async_result = await send_task_integer_multiplication(integer)
-    await task_ready(async_result)
-    return await task_result(async_result)
+    return await task_sync_response(async_result)
 
 @router.post("/integer-multiplication/async/", response_model = AsyncTask)
 async def post_integer_multiplication_async(
@@ -29,7 +27,7 @@ async def post_integer_multiplication_async(
     """ Send task : integer-multiplication, to project-worker and retrieve taskId to get the result later """
     
     async_result = await send_task_integer_multiplication(integer)
-    return {"taskId": async_result.id}
+    return await task_async_response(async_result)
 
 @router.post("/integers-sum/")
 async def post_integers_sum(
@@ -38,8 +36,7 @@ async def post_integers_sum(
     """ Send task : integers-sum, to project-worker and wait for the result """
     
     async_result = await send_task_integers_sum(integers)
-    await task_ready(async_result)
-    return await task_result(async_result)
+    return await task_sync_response(async_result)
 
 @router.post("/integers-sum/async/", response_model = AsyncTask)
 async def post_integers_sum_async(
@@ -48,4 +45,4 @@ async def post_integers_sum_async(
     """ Send task : integers-sum, to project-worker and retrieve taskId to get the result later """
     
     async_result = await send_task_integers_sum(integers)
-    return {"taskId": async_result.id}
+    return await task_async_response(async_result)

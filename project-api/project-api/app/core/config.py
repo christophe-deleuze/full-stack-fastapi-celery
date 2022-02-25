@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from pydantic import BaseSettings
+from typing import List
+
+from pydantic import BaseSettings, AnyHttpUrl, validator
 
 
 class Settings(BaseSettings):
@@ -50,12 +52,17 @@ The Celery worker project is dedicated to process tasks.
 - You could use prometheus and rabbitMQ metrics exporter to manage auto-scaling on queue length.
 """
     
+    # CORS_ALLOW_ORIGINS is a JSON-formatted list of origins
+    # e.g: ["http://localhost", "http://localhost:4200", "http://localhost:3000", "http://localhost:8080"]
+    CORS_ALLOW_ORIGINS: List[AnyHttpUrl] = []
+    
     # Postgres common parameters
     POSTGRES_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@127.0.0.1/postgres"
     
-    # FastAPI timeout for every Celery task
+    # Celery timeout for every task and other defaults parameters
     CELERY_TASK_READY_TIME_OUT: float = 360.0 # sec
     CELERY_TASK_RESULT_TIME_OUT: float = 0.5 # sec
+    CELERY_STANDARD_SERIALIZER: str = 'json'
     
     # Celery parameters
     CELERY_BROKER_URL: str = 'pyamqp://guest:guest@127.0.0.1:5672//'
@@ -65,5 +72,14 @@ The Celery worker project is dedicated to process tasks.
     
     # project-worker config
     PROJECT_WORKER_QUEUE = "project-worker"
+    
+    @validator("CORS_ALLOW_ORIGINS", pre=True)
+    def assemble_cors_allow_origins(cls, v: str | List[str]) -> str | List[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return v
+        raise ValueError(v)
+
 
 settings = Settings()

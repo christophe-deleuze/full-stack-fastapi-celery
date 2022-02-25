@@ -1,8 +1,8 @@
-fastapi==0.73.0
+fastapi==0.74.1
 starlette-prometheus==0.9.0
 python-multipart==0.0.5
-uvicorn==0.17.4
-redis==4.1.2
+uvicorn==0.17.5
+redis==4.1.4
 celery==5.2.3
 asyncpg==0.25.0
 sqlalchemy==1.4.31
