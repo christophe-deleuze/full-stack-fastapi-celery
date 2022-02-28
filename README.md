@@ -1,13 +1,84 @@
 Description
 ============
 
-Ce projet présente une stack complète composée d'une API REST (FastAPI) et d'un worker (Celery).
-L'objectif de ce projet est didactique : monitoring, tests, métriques, documentation et bonnes pratiques sont disséminées partout.
-Prenez le temps de regarder chaque fichier pour comprendre comment l'ensemble des services interagissent entre eux.
+Ce projet présente une API REST qui sert d'interface pour interroger une base de données PostGreSQL (ou autre...) ainsi que des services tiers.
+Cette API est elle même consommée par un service dont le rôle est de créer une dashboard pour visualiser des données.
 
-Voici un aperçu visuel du projet :
+L'objectif de ce projet est didactique : monitoring, tests, métriques, documentation et bonnes pratiques sont disséminées partout. Au travers des README.md du projet, vous apprendrez des tips en Python mais aussi sur l'ensemble des Frameworks et librairies utilisées.
 
-[![Project docs](img/project-architecture.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
+Prenez le temps de lire chaque README.md et de regarder chaque fichier pour comprendre comment l'ensemble des services interagissent entre eux.
+
+## Par où commencer ?
+
+Commençons par illustrer de manière simplifiée le projet :
+[![Project docs](img/project-synthese-architecture.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
+
+Ce que nous voyons ici, est une architecture découpée en deux partie : front / back. 
+Front et back font références à des réseaux distincts.
+Le réseau du front est accessible à des utilisateurs (couleur verte) tandis que le réseau du back ne l'est pas (couleur rouge).
+
+Ainsi, la communication entre les services du back ne sont pas accessibles à un utilisateur externe, cela pour des raisons de sécurité évidente.
+
+Une nouvelle fois, le schéma précédent peut encore êtres simplifié de la façon suivante :
+[![Project docs](img/project-synthese-architecture-simplifiee.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
+
+### Le backend
+
+Le backend est composé d'une base de données PostgresSQL et de divers services qui ne sont pas accessible directement pour un utilisateur externe.
+
+C'est donc l'API qui va avoir le rôle d'interroger les services du back et de mettre à disposition des utilisateurs externes, qui ont accès au front, les réponses retournées par les services du back.
+
+On comprend intuitivement que le rôle de l'API, à cheval entre le front et le back va nécessairement impliquer des notions de sécurité et de scalabilité.
+
+### Le frontend
+
+Le front ,quant à lui, est composé d'un service (Dashboard) qui n'accède qu'au réseau frontal et dont le rôle est d'utiliser l'API pour générer une dashboard afin de visualiser des données.
+
+L'utilisateur accède aussi bien au service dashboard qu'à l'API en elle-même. En général, l'API est consommée par d'autres services, tel que le projet dashboard tandis que l'utilisateur final lui ce contentera d'utiliser les services exploitant cette API.
+
+A noter toutefois que l'API possède aussi une partie documentation qui sera elle, utilisée directement par les développeurs de services comme, par exemple, la dashboard.
+
+## La question des besoins
+
+Dans une architecture en microservices, chaque service vient avec ses propres besoins. 
+Par exemple, la base de données nécessitera toujours de pouvoir être administrée. Dans notre cas, nous allons utiliser l'outil pgadmin.
+Voici comment évolue notre schéma en ajoutant pgadmin :
+
+[![Project docs](img/project-synthese-architecture-simplifiee-administree.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
+
+De manière plus globale, un autre besoin important va se dégager pour l'ensemble des services, celui de pouvoir monitorer la santé des services.
+Le monitoring est une interface visuelle dont le rôle est de nous permettre de rapidement savoir si tous les services fonctionnent correctement.
+
+Implicitement, cela induit le fait que chaque service doit fournir des informations à l'interface visuelle du monitoring.
+
+La solution retenue dans notre projet consiste à utiliser une base de données spécialisée dans la collecte de métriques (Prometheus) et son outil pour visualiser les métriques qu'elle à collecter (Grafana).
+La collecte des métriques par Prometheus se fait à l'aide d'une requête HTTP l'endpoint /metrics. Ainsi, pour fournie des données à Prometheus, chaque service doit pouvoir répondre à une requête HTTP de type GET sur /metrics.
+
+Pour l'API REST, rien de compliqué, il suffit d'ajouter un endpoint /metrics à celle-ci. Pour la base de donnée, comme elle ne sait pas nativement gérer des requêtes HTTP, il faudra faire appel à un service intermédiaire qui va collecter des métriques et les mettres à disposition de Prometheus. Ce type de service est appelé : Exporter.
+
+Mettons à jour le schéma :
+[![Project docs](img/project-synthese-architecture-simplifiee-administree-monitoree-partiellement.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
+
+On remarque dans notre schéma, que je n'ai pas illustré l'exporter demétriques par les services tiers. Cela s'explique par le fait qu'ils ne sont pas forcément adaptés pour retourner des métriques.
+Dans ce cas, on peut s'en tirer en distribuant les tâches aux services à l'aide d'intermédiaires (middlewares).
+
+
+...
+
+
+Schéma final du projet :
+[![Project docs](img/project-synthese-architecture-archi-complet.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
+
+## Vision par service
+
+Ne nous attardons pas sur la complexité du schéma précédent. Gardons simplement une vision par services et de comment nous allons les manipuler :
+
+[![Project docs](img/services-urls.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
+
+
+
+
+## Retour sur la stack complète
 
 La stack comprend :
  - Prometheus: Base de données de métriques. Elle collecte elle même les métriques de differents services ;
@@ -117,13 +188,26 @@ celery -A tasks:app worker --pool prefork -Q project-worker --concurrency=1 -n w
 Roadmap
 ============
 
-- Implémenter des tâches celery : avec argument / sans argument / avec une serialisation pickle
-- Implémenter dans l'api une app qui fait du crud asynchrone avec PostgreSQL
-- Implémenter les tests pour l'api
-- Implémenter les tests pour le worker celery
-- Finir la documentation fichier par fichier
+- project-api (FastAPI) :
+--- Finir la documentation fichier par fichier
+--- Implémenter des tâches celery : avec argument / sans argument / avec une serialisation pickle
+--- Implémenter dans l'api une app qui fait des requêtes crud asynchrone avec PostgreSQL
+--- Implémenter les tests pour l'api
+--- Implémenter un websocket
+--- Implémenter une authentification oauth2
+--- Implémenter une partie privée / publique à l'API
 
-Détails fichier par fichier du projet
+- project-worker (Celery) :
+--- Finir la documentation fichier par fichier
+--- Implémenter les tests pour le worker celery
+
+- monitoring-workflow (celery + celery-director ???) :
+--- Monitorer un workflow
+
+- project-dash (plotly/dash) :
+--- Implémenter une dashboard avec plotly/dash et qui consomme l'API Rest
+
+Détails fichier par fichier de l'ensemble du projet
 ============
 
 ## [docker-compose.yml](docker-compose.yml)
@@ -227,123 +311,3 @@ Pour finir, ce dernier exemple illustre parfaitement d'autres sections qui ont l
 - `command` : Définit la commande qui sera executée au lancement du conteneur. A noter que si une commande est définie à la dernière ligne d'un `Dockerfile`, celle définit dans le docker-compose l'écrasera. Généralement, la commande définie à la fin des `Dockerfile` servira principalement pour lancer unitairement le service tandis que la commande définie dans le docker-compose sera adaptée à l'environnement ;
 - `environment` : Définit les variables d'environnement à charger dans le service. L'utilisation de variables d'environnements (à bon escient) dans les services permet une plus grande modularité des services par rapport à leur utilisation dans différents environnements.
 - `depends` : Définit la relation de dépendance du service par rapport à d'autres services.
-
-## [app.core.config.py](/app/core/config.py)
-
-Fichier de configuration qui sert à gérer les variables d'environnements.
-
-Au démarrage de l'application, la librairie Pydantic lit les variables d'environnements et remplace la valeur par défaut de chaque attribut de classe ayant le même nom qu'une variable d'environnement. 
-
-Bonne pratique :
-- Pas de donnée confidentielle dans les Settings ;
-- Typer les variables ;
-- Définir les hosts par défaut à 127.0.0.1 pour qu'ils accèdent nativement aux autres services chargés sur votre environnement de dev.
-
-Ce que l'on y met :
-- Nom de l'API
-- Version de l'API
-- Description de l'API
-- Host
-- User
-- Password
-- Broker
-- Result Backend
-- Timeout
-- ...
-
-## [app.core.celery.async_celery.py](project-api/project-api/app/core/celery/async_celery.py)
-
-Celery est un framework de distribution de tâches asynchrones.
-Il faut distinguer le producer qui génère des tâches et le worker qui traite des tâches.
-Pour distribuer les tâches, Celery à besoin d'un broker et d'un result_backend.
-Le broker est le messager qui enregistre les tâches.
-Le result_backend est la base de données en mémoire qui stocke temporairement le résultat des tâches.
-Le découplage broker / result_backend permet d'optimiser leurs travails respectifs.
-
-Dans notre environnement :
-- broker : RabbitMQ ;
-- result_backend : Redis ;
-- producer : FastAPI.
-
-Celery n'est pas (encore) nativement compatible avec asyncio.
-Par conséquent, pour tirer au maximum partie des capacités asynchrones de FastAPI il est nécessaire d'adapter Celery.
-Seul les fonctionnalités qui servent à produire des tâches ont besoin d'être wrapper.
-
-A noter que Celery permet de produire des tâches de deux façons.
-- On connait la tâche : Il suffit de l'importer ;
-- On ne connait pas la tâche : Il suffit de réecrire une signature.
-
-Pour découpler l'API des dépendances des tâches, seul la seconde approche est à retenir.
-
-Les fonctions à wrapper sont donc :
-- Celery().send_task()
-- AsyncResult.get()
-
-En complément du wrap des fonctions précédentes, le fichier possède une fonction qui permet d'attendre la mise à disposition d'un résultat d'une tâche distribuée avec le framework Celery. L'attente de type 'exponential backoff'.
-
-NB : AsyncResult.get() étant bloquant, un timeout est systématiquement employé avec l'appel de la méthode.
-
-Voici les deux cinématiques de tâches implémentées dans l'API:
-
-```
-##### Cinématique 'synchrone'
-# Envoi de la tâche
-async_result = await send_task(*args, **kwargs)
-# Attente du résultat
-await task_ready(async_result)
-# Récupération du résultat
-resultat = await task_result(async_result)
-
-##### Cinématique 'asynchrone'
-### Etape 1: Générer une tâche et récupérer son identifiant
-# Envoi de la tâche
-async_result = await send_task(*args, **kwargs)
-# Retourner l'UUID unique de la tâche
-task_id = async_result.id
-
-### Etape 2: Récupérer le résultat d'une tâche à partir de son identifiant
-# Attente du résultat
-async_result = await task_async_result(task_id)
-# Récupération du résultat
-resultat = await task_result(async_result)
-```
-
-Pour transformer les fonctions synchrones en fonction asynchrones, j'utilise la librairie asgiref qui est nativement disponible avec FastAPI.
-
-```
-from asgiref.sync import sync_to_async
-```
-
-Tips :
-- Par défaut la serialisation des tâches se fait au format json ;
-- Dans un environnement sécurisé, il est possible d'ajouter la serialisation pickle à Celery afin de permettre de transiter n'importe quel objet python natif d'un service à un autre ;
-```
-app.conf.update(
-    accept_content = ['application/json', 'application/x-python-serialize']
-)
-```
-- Pour définir la serialisation à utiliser lors de l'envois d'une tâche on utilisera serializer='json' / serializer='pickle' : 
-- Sécuriser les connections avec le broker (confirmer la publication des tâches) & le backend (garder la connection en vie) :
-```
-app.conf.update(
-    broker_transport_options = {
-        "confirm_publish": True,
-        "max_retries": 5 },
-    redis_socket_keepalive=True
-)
-```
-- A chaque service autonome, sa propre file d'attente (queue). Le nom de la file d'attente sera le nom du type de service et le nom des tâches sera le nom des fonctions ;
-- NB : Le nom des tâches pourrait être précédé du nom du service pour faciliter la lecture des logs.
-
-Bonne pratique :
-- Définir explicitement une tâche avec son nom, sa serialisation et sa file d'attente ;
-- Expirer automatiquement une tâche celery avec un timeout et révoquer la tâche après timeout ;
-- Supprimer automatiquement un résultat après récupération ;
-- Executer des tâches de manières asynchrone en récupérant leur UUID qui pourrait être utilisé plus tard pour récupérer le résultat.
-
-## [app.core.celery.schemas.py](project-api/project-api/app/core/celery/schemas.py)
-
-Ce fichier sert à définir les schemas de validation génériques à utiliser pour manipuler des tâches celery asynchrones.
-
-- AsyncTask est le modèle de réponse utilisé pour retourner l'id d'une tâche ;
-- AsyncTaskStatus est le modèle de réponse utilisé pour retourner le status d'une tâche (id, status, result).
