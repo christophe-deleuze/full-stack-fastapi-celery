@@ -4,7 +4,7 @@ Description
 Ce projet présente une API REST qui sert d'interface pour interroger une base de données PostGreSQL (ou autre...) ainsi que des services tiers.
 Cette API est elle même consommée par un service dont le rôle est de créer une dashboard pour visualiser des données.
 
-L'objectif de ce projet est didactique : monitoring, tests, métriques, documentation et bonnes pratiques sont disséminées partout. Au travers des README.md du projet, vous apprendrez des tips en Python mais aussi sur l'ensemble des Frameworks et librairies utilisées.
+L'objectif de ce projet est didactique : monitoring, tests, métriques, documentation et bonnes pratiques sont disséminées partout. Au travers des README.md du projet, vous apprendrez des tips sur Python et sur l'ensemble des Frameworks et librairies utilisées.
 
 Prenez le temps de lire chaque README.md et de regarder chaque fichier pour comprendre comment l'ensemble des services interagissent entre eux.
 
@@ -19,7 +19,7 @@ Le réseau du front est accessible à des utilisateurs (couleur verte) tandis qu
 
 Ainsi, la communication entre les services du back ne sont pas accessibles à un utilisateur externe, cela pour des raisons de sécurité évidente.
 
-Une nouvelle fois, le schéma précédent peut encore êtres simplifié de la façon suivante :
+Pour des raisons pratique, simplifions le schéma précédent :
 [![Project docs](img/project-synthese-architecture-simplifiee.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
 ### Le backend
@@ -51,15 +51,15 @@ Le monitoring est une interface visuelle dont le rôle est de nous permettre de 
 
 Implicitement, cela induit le fait que chaque service doit fournir des informations à l'interface visuelle du monitoring.
 
-La solution retenue dans notre projet consiste à utiliser une base de données spécialisée dans la collecte de métriques (Prometheus) et son outil pour visualiser les métriques qu'elle à collecter (Grafana).
-La collecte des métriques par Prometheus se fait à l'aide d'une requête HTTP l'endpoint /metrics. Ainsi, pour fournie des données à Prometheus, chaque service doit pouvoir répondre à une requête HTTP de type GET sur /metrics.
+La solution retenue dans notre projet consiste à utiliser une base de données spécialisée dans la collecte de métriques (Prometheus) et un outil pour visualiser les métriques qu'elle a collecté (Grafana).
+La collecte des métriques par Prometheus se fait à l'aide de requêtes HTTP sur des endpoints `/metrics`. Ainsi, pour fournie des données à Prometheus, chaque service doit pouvoir répondre à une requête HTTP de type GET sur `/metrics`.
 
-Pour l'API REST, rien de compliqué, il suffit d'ajouter un endpoint /metrics à celle-ci. Pour la base de donnée, comme elle ne sait pas nativement gérer des requêtes HTTP, il faudra faire appel à un service intermédiaire qui va collecter des métriques et les mettres à disposition de Prometheus. Ce type de service est appelé : Exporter.
+Pour l'API REST, rien de compliqué, il suffit d'ajouter un endpoint `/metrics` à celle-ci. Pour la base de donnée, comme elle ne sait pas nativement gérer des requêtes HTTP, il faudra faire appel à un service intermédiaire qui va collecter des métriques et les mettres à disposition de Prometheus. Ce type de service est appelé : Exporter.
 
 Mettons à jour le schéma :
 [![Project docs](img/project-synthese-architecture-simplifiee-administree-monitoree-partiellement.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
-On remarque dans notre schéma, que je n'ai pas illustré l'exporter demétriques par les services tiers. Cela s'explique par le fait qu'ils ne sont pas forcément adaptés pour retourner des métriques.
+On remarque dans notre schéma, que je n'ai pas illustré l'exporter des métriques pour les services tiers. Cela s'explique par le fait qu'ils ne sont pas forcément adaptés pour retourner des métriques.
 Dans ce cas, on peut s'en tirer en distribuant les tâches aux services à l'aide d'intermédiaires (middlewares).
 
 
@@ -71,7 +71,7 @@ Schéma final du projet :
 
 ## Vision par service
 
-Ne nous attardons pas sur la complexité du schéma précédent. Gardons simplement une vision par services et de comment nous allons les manipuler :
+Ne nous attardons pas sur la complexité du dernier schéma de la section précédente. Gardons simplement une vision par services afin de voir comment nous allons les manipuler via des urls :
 
 [![Project docs](img/services-urls.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
@@ -189,23 +189,23 @@ Roadmap
 ============
 
 - project-api (FastAPI) :
---- Finir la documentation fichier par fichier
---- Implémenter des tâches celery : avec argument / sans argument / avec une serialisation pickle
---- Implémenter dans l'api une app qui fait des requêtes crud asynchrone avec PostgreSQL
---- Implémenter les tests pour l'api
---- Implémenter un websocket
---- Implémenter une authentification oauth2
---- Implémenter une partie privée / publique à l'API
+    - Finir la documentation fichier par fichier
+    - Implémenter des tâches celery : avec argument / sans argument / avec une serialisation pickle
+    - Implémenter dans l'api une app qui fait des requêtes crud asynchrone avec PostgreSQL
+    - Implémenter les tests pour l'api
+    - Implémenter un websocket
+    - Implémenter une authentification oauth2
+    - Implémenter une partie privée / publique à l'API
 
 - project-worker (Celery) :
---- Finir la documentation fichier par fichier
---- Implémenter les tests pour le worker celery
+    - Finir la documentation fichier par fichier
+    - Implémenter les tests pour le worker celery
 
 - monitoring-workflow (celery + celery-director ???) :
---- Monitorer un workflow
+    - Monitorer un workflow
 
 - project-dash (plotly/dash) :
---- Implémenter une dashboard avec plotly/dash et qui consomme l'API Rest
+    - Implémenter une dashboard avec plotly/dash et qui consomme l'API Rest
 
 Détails fichier par fichier de l'ensemble du projet
 ============
