@@ -71,15 +71,13 @@ Les notions clés à retenir sont :
 - Les **workers** traitent des tâches.
 
 La discussion entre les **producers** et les **workers** nécessite deux intermédiaires :
-- Le **broker** (messager) qui passe messages entre les **producers** et **workers**;
-- Le **result backend** (mémoire cache distribuée) qui stocke temporairement les résultats des tâches traitées par les **workers**.
+- Le **broker** (messager) qui passe des messages entre les **producers** et **workers**;
+- Le **result backend** (mémoire cache distribuée) qui stocke temporairement les résultats des tâches traitées par les **workers** le temps que les **producers** les récupèrent.
 
 Comme le **broker** et le **result backend** sont des intermédiaires entre des **producers** et des **workers**, on dit que se sont des **middlewares**.
 
-La combo **broker** et **result backend** permet d'associer au Framework `Celery` ces propres outils de monitoring, dont `Flower` est un exemple.
+Comme tout **middleware** qui se respecte, se sont de bons candidats pour collecter des métriques. Combiné au Framework `Celery`, un outil de monitoring de tâche comme `Flower` apporte un vrai confort pour garder un oeil sur les services distribués.
  
-Evidemment, l'ajout de tous ces services, nécessite aussi d'exporter des métriques.
-
 Au regard des nouvelles information que nous avons, voici le schéma final du projet :
 [![Project docs](img/project-synthese-architecture-archi-complet.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
