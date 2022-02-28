@@ -1,72 +1,87 @@
 Description
 ============
 
-Ce projet présente une API REST qui sert d'interface pour interroger une base de données PostGreSQL (ou autre...) ainsi que des services tiers.
-Cette API est elle même consommée par un service dont le rôle est de créer une dashboard pour visualiser des données.
+Ce projet présente une **API** REST qui sert d'interface pour interroger une base de données PostGreSQL (ou autre...) ainsi que des services tiers. Cette **API**, est elle-même consommée par un service dont le rôle est de créer une dashboard pour visualiser des données.
 
-L'objectif de ce projet est didactique : monitoring, tests, métriques, documentation et bonnes pratiques sont disséminées partout. Au travers des README.md du projet, vous apprendrez des tips sur Python et sur l'ensemble des Frameworks et librairies utilisées.
+L'objectif de ce projet est didactique et traite différentes thématiques telles que le monitoring, les tests, les métriques, les logs et la documentation. Au travers des README.md du projet, vous apprendrez des tips sur Python et sur l'ensemble des Frameworks et librairies utilisées.
 
-Prenez le temps de lire chaque README.md et de regarder chaque fichier pour comprendre comment l'ensemble des services interagissent entre eux.
+
+Bien que tout soit orienté à des fins didactiques, vous êtes libre de réutiliser ce projet comme vous le souhaitez. En l'état, celui-ci est idéal pour faire un POC (Proof Of Concept) prêt en moins de 10 minutes afin de démontrer la faisabilité de l'ensemble. Le tout, au prix de 2 lignes de commandes à exécuter si vous avez [docker](https://www.docker.com/get-started) & [Linux WSL2 pour machines x64 windows](https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi) d'installer sur votre machine.
+
+Dans tous les cas, vous trouverez dans ce projet toutes les clés pour apporter une vraie plus-value à n'importe quelle entreprise qui serait ouverte à la possibilité de travailler avec un backend orienté Python !
+En bonus, gardez à l'esprit que fonctionnellement ce projet démontre la faisabilité de migrer n'importe quel logiciel basé sur une architecture monolithique vers une architecture orienté micro services. Pourquoi ? Car en s'appuyant sur le protocole HTTP de l'**API** REST et sur la distribution de tâches, il est possible de migrer partie par partie, sereinement, des portions de codes tout en continuant à faire fonctionner l'ancienne solution via des requêtes HTTP.
+
+En résumé, prenez le temps de lire chaque README.md et de regarder chaque fichier pour comprendre comment l'ensemble des services interagissent entre eux.
 
 ## Par où commencer ?
 
 Commençons par illustrer de manière simplifiée le projet :
 [![Project docs](img/project-synthese-architecture.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
-Ce que nous voyons ici, est une architecture découpée en deux partie : front / back. 
-Front et back font références à des réseaux distincts.
-Le réseau du front est accessible à des utilisateurs (couleur verte) tandis que le réseau du back ne l'est pas (couleur rouge).
+Ce que nous voyons ici, est une architecture découpée en deux partie : **front** et **back**. Ils font chaque référence à des réseaux distincts.
+Le réseau **front** (frontal) est accessible à des utilisateurs externes (couleur verte), tandis que le réseau du **back** ne l'est pas (couleur rouge).
 
-Ainsi, la communication entre les services du back ne sont pas accessibles à un utilisateur externe, cela pour des raisons de sécurité évidente.
+Cela signifie que la communication entre les services du **back** ne sont pas accessibles à un utilisateur externe pour des raisons de sécurité évidente.
 
-Pour des raisons pratique, simplifions le schéma précédent :
+Comme le schéma l'illustre, l'**API** communique avec une base de données et divers services. En regroupant les services ensemble, cela simplifie le schéma :
 [![Project docs](img/project-synthese-architecture-simplifiee.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
 ### Le backend
 
-Le backend est composé d'une base de données PostgresSQL et de divers services qui ne sont pas accessible directement pour un utilisateur externe.
+Le **backend** est composé d'une base de données **PostgresSQL** et de divers services qui ne sont pas accessible directement pour un utilisateur externe.
 
-C'est donc l'API qui va avoir le rôle d'interroger les services du back et de mettre à disposition des utilisateurs externes, qui ont accès au front, les réponses retournées par les services du back.
+C'est donc l'**API** qui va avoir le rôle d'interroger les services du **back** et de mettre à disposition des utilisateurs externes, qui ont accès au **front**, les réponses retournées par ces services.
 
-On comprend intuitivement que le rôle de l'API, à cheval entre le front et le back va nécessairement impliquer des notions de sécurité et de scalabilité.
+On comprend intuitivement que le rôle de l'**API**, à cheval entre le **front** et le **back** va nécessairement impliquer des notions de sécurité et de scalabilité.
 
 ### Le frontend
 
-Le front ,quant à lui, est composé d'un service (Dashboard) qui n'accède qu'au réseau frontal et dont le rôle est d'utiliser l'API pour générer une dashboard afin de visualiser des données.
+Le **frontend**, dans notre architecture, est composé d'un unique service (Dashboard) qui n'accède qu'au réseau **front** et dont le rôle est d'utiliser l'**API** pour générer une dashboard afin de visualiser des données. Comme l'**API** est accessible par n'importe quel utilisateur, le projet Dashboard aurait pu être développé par n'importe qui. Toutefois, cela ne signifie pas pour autant que son code source sera accessible à tous !
 
-L'utilisateur accède aussi bien au service dashboard qu'à l'API en elle-même. En général, l'API est consommée par d'autres services, tel que le projet dashboard tandis que l'utilisateur final lui ce contentera d'utiliser les services exploitant cette API.
+Pour résumer, l'utilisateur accède aussi bien au service dashboard qu'à l'**API** en elle-même. En général, l'**API** est consommée par d'autres services, tels que le projet dashboard, tandis que l'utilisateur final se contente en général d'utiliser les services qui exploitent cette **API**.
 
-A noter toutefois que l'API possède aussi une partie documentation qui sera elle, utilisée directement par les développeurs de services comme, par exemple, la dashboard.
+A noter toutefois que l'**API** possède toujours une partie documentation qui est utilisée directement par les développeurs de services.
 
 ## La question des besoins
 
-Dans une architecture en microservices, chaque service vient avec ses propres besoins. 
-Par exemple, la base de données nécessitera toujours de pouvoir être administrée. Dans notre cas, nous allons utiliser l'outil pgadmin.
-Voici comment évolue notre schéma en ajoutant pgadmin :
+Dans une architecture en micro services, chaque service vient avec ses propres besoins qui lui sont spécifiques. 
+Par exemple, la base de données nécessite toujours de pouvoir être administrée. Il est donc nécessaire d'ajouter dans l'architecture un outil spécialisé dans l'administration d'une base de données `PostGreSQL` et qui est `pgadmin`.
+Voici comment évolue notre schéma en ajoutant `pgadmin` :
 
 [![Project docs](img/project-synthese-architecture-simplifiee-administree.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
 De manière plus globale, un autre besoin important va se dégager pour l'ensemble des services, celui de pouvoir monitorer la santé des services.
-Le monitoring est une interface visuelle dont le rôle est de nous permettre de rapidement savoir si tous les services fonctionnent correctement.
+Le **monitoring** est l'action de réunir dans une interface graphique un ensemble d'informations qui vont nous permettre de rapidement avoir un état des lieux sur la santé des services. Le monitoring va de paire avec l'**alerting** qui consiste à lever des alertes automatiquement avec l'aide de critères soigneusement choisient sur l'ensemble des services monitorés.
 
-Implicitement, cela induit le fait que chaque service doit fournir des informations à l'interface visuelle du monitoring.
+Implicitement, cela induit le fait que chaque service doit fournir des informations à l'interface visuelle du **monitoring**. Or, comme dans une architecture en micro services les tâches sont généralement découpées, le service de visualisation des métriques (**monitoring**) et le service de collecte des métriques sont distincts.
 
-La solution retenue dans notre projet consiste à utiliser une base de données spécialisée dans la collecte de métriques (Prometheus) et un outil pour visualiser les métriques qu'elle a collecté (Grafana).
-La collecte des métriques par Prometheus se fait à l'aide de requêtes HTTP sur des endpoints `/metrics`. Ainsi, pour fournie des données à Prometheus, chaque service doit pouvoir répondre à une requête HTTP de type GET sur `/metrics`.
+La solution retenue dans notre projet consiste donc à utiliser une base de données spécialisée dans la collecte de métriques (`Prometheus`) et un outil (`Grafana`) pour visualiser en quasi temps réel les métriques qu'elle collecte.
+La collecte des métriques par `Prometheus` se fait à l'aide de requêtes **HTTP** sur des endpoints `/metrics`. Ainsi, pour fournie des données à `Prometheus`, chaque service doit pouvoir répondre à une requête **HTTP** de type **GET** sur l'endpoint `/metrics`.
 
-Pour l'API REST, rien de compliqué, il suffit d'ajouter un endpoint `/metrics` à celle-ci. Pour la base de donnée, comme elle ne sait pas nativement gérer des requêtes HTTP, il faudra faire appel à un service intermédiaire qui va collecter des métriques et les mettres à disposition de Prometheus. Ce type de service est appelé : Exporter.
+Pour l'**API** REST, rien de compliqué, il suffit d'ajouter un endpoint `/metrics` à celle-ci. Pour la base de donnée, comme elle ne sait pas nativement gérer des requêtes **HTTP**, il faudra faire appel à un service intermédiaire qui va collecter des métriques et les mettres à disposition de `Prometheus`. Ce type de service est appelé **exporter**.
 
 Mettons à jour le schéma :
 [![Project docs](img/project-synthese-architecture-simplifiee-administree-monitoree-partiellement.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
-On remarque dans notre schéma, que je n'ai pas illustré l'exporter des métriques pour les services tiers. Cela s'explique par le fait qu'ils ne sont pas forcément adaptés pour retourner des métriques.
-Dans ce cas, on peut s'en tirer en distribuant les tâches aux services à l'aide d'intermédiaires (middlewares).
+On remarque dans notre schéma, que je n'ai pas illustré l'**exporter** des métriques pour les services tiers. Cela s'explique par le fait qu'ils ne sont pas forcément adaptés pour retourner des métriques. En effet, certains micro-services, par nécessité ou obligation, n'intègrent pas nativement de serveur web pour remplir le rôle de mise à disposition des métriques.
 
+Toutefois, comme nous souhaitons que les services puissent quand même communiquer entre eux, au lieu que chaque service implémente sa propre interface de type **API** REST (ce qui est tout à fait faisable et acceptable), nous utiliserons un Framework spécialisé dans la distribution de tâche : `Celery`. L'avantage de ce type de Framework est d'apporter une réponse complète à toute la problématique de distribution de tâches.
 
-...
+Les notions clés à retenir sont :
+- Les **producers** produisent des tâches ;
+- Les **workers** traitent des tâches.
 
+La discussion entre les **producers** et les **workers** nécessite deux intermédiaires :
+- Le **broker** (messager) qui passe messages entre les **producers** et **workers**;
+- Le **result backend** (mémoire cache distribuée) qui stocke temporairement les résultats des tâches traitées par les **workers**.
 
-Schéma final du projet :
+Comme le **broker** et le **result backend** sont des intermédiaires entre des **producers** et des **workers**, on dit que se sont des **middlewares**.
+
+La combo **broker** et **result backend** permet d'associer au Framework `Celery` ces propres outils de monitoring, dont `Flower` est un exemple.
+ 
+Evidemment, l'ajout de tous ces services, nécessite aussi d'exporter des métriques.
+
+Au regard des nouvelles information que nous avons, voici le schéma final du projet :
 [![Project docs](img/project-synthese-architecture-archi-complet.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
 ## Vision par service
@@ -75,13 +90,10 @@ Ne nous attardons pas sur la complexité du dernier schéma de la section préc�
 
 [![Project docs](img/services-urls.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
-
-
-
 ## Retour sur la stack complète
 
 La stack comprend :
- - Prometheus: Base de données de métriques. Elle collecte elle même les métriques de differents services ;
+ - Prometheus: Base de données de métriques. Elle collecte elle-même les métriques de differents services ;
  - Grafana: Monitoring des métriques collectées par prometheus ;
  - Node-Exporter: Exporte des métriques de la machine pour Prometheus ;
  - PostgreSQL: Base de données relationnelle ;
