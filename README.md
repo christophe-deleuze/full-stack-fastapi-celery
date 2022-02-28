@@ -1,24 +1,23 @@
 Description
 ============
 
-Ce projet présente une **API** REST qui sert d'interface pour interroger une base de données PostGreSQL (ou autre...) ainsi que des services tiers. Cette **API**, est elle-même consommée par un service dont le rôle est de créer une dashboard pour visualiser des données.
+Ce projet présente une **API** REST qui sert d'interface pour interroger une base de données **PostGreSQL** (ou autre...) ainsi que des services tiers. Cette **API**, est elle-même consommée par un service dont le rôle est de créer une **dashboard** pour visualiser des données.
 
-L'objectif de ce projet est didactique et traite différentes thématiques telles que le monitoring, les tests, les métriques, les logs et la documentation. Au travers des README.md du projet, vous apprendrez des tips sur Python et sur l'ensemble des Frameworks et librairies utilisées.
+L'objectif de ce projet est didactique et traite différentes thématiques telles que le monitoring, les tests, les métriques, les logs et la documentation. Au travers des `README.md` du projet, vous apprendrez des tips sur **Python** et sur l'ensemble des Frameworks et librairies utilisées.
 
+Bien que tout soit orienté à des fins didactiques, vous êtes libre de réutiliser ce projet comme vous le souhaitez. En l'état, celui-ci est idéal pour faire un **POC** (Proof Of Concept) prêt en moins de 10 minutes afin de démontrer la faisabilité de l'ensemble. Lancer le projet se fait en 3 lignes de commandes à exécuter dès lors que vous avez [docker](https://www.docker.com/get-started) & le composant Linux [WSL2](https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi) d'installer sur votre machine si vous travaillez sur windows.
 
-Bien que tout soit orienté à des fins didactiques, vous êtes libre de réutiliser ce projet comme vous le souhaitez. En l'état, celui-ci est idéal pour faire un POC (Proof Of Concept) prêt en moins de 10 minutes afin de démontrer la faisabilité de l'ensemble. Le tout, au prix de 2 lignes de commandes à exécuter si vous avez [docker](https://www.docker.com/get-started) & [Linux WSL2 pour machines x64 windows](https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi) d'installer sur votre machine.
+Dans tous les cas, vous trouverez dans ce projet toutes les clés pour apporter une vraie plus-value à n'importe quelle entreprise qui serait ouverte à la possibilité de travailler avec un **backend** orienté **Python** !
+En bonus, gardez à l'esprit que fonctionnellement ce projet démontre la faisabilité de migrer n'importe quel logiciel basé sur une **architecture monolithique** vers une **architecture orientée micro services**. Pourquoi ? Car en s'appuyant sur le protocole **HTTP** de l'**API** REST et sur la distribution de tâches, il est possible de migrer partie par partie, sereinement, des portions de codes de l'ancienne architecture vers la nouvelle tout en assurant la rétro-compatibilité de la migration en continuant de faire fonctionner l'ancienne solution via des requêtes **HTTP**.
 
-Dans tous les cas, vous trouverez dans ce projet toutes les clés pour apporter une vraie plus-value à n'importe quelle entreprise qui serait ouverte à la possibilité de travailler avec un backend orienté Python !
-En bonus, gardez à l'esprit que fonctionnellement ce projet démontre la faisabilité de migrer n'importe quel logiciel basé sur une architecture monolithique vers une architecture orienté micro services. Pourquoi ? Car en s'appuyant sur le protocole HTTP de l'**API** REST et sur la distribution de tâches, il est possible de migrer partie par partie, sereinement, des portions de codes tout en continuant à faire fonctionner l'ancienne solution via des requêtes HTTP.
-
-En résumé, prenez le temps de lire chaque README.md et de regarder chaque fichier pour comprendre comment l'ensemble des services interagissent entre eux.
+En résumé, prenez le temps de lire chaque `README.md` et de regarder chaque fichier pour comprendre comment l'ensemble des services interagissent entre eux.
 
 ## Par où commencer ?
 
 Commençons par illustrer de manière simplifiée le projet :
 [![Project docs](img/project-synthese-architecture.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
-Ce que nous voyons ici, est une architecture découpée en deux partie : **front** et **back**. Ils font chaque référence à des réseaux distincts.
+Ce que nous voyons ici, est une architecture découpée en deux partie : **front** et **back**. Ils font chacun référence à des réseaux distincts.
 Le réseau **front** (frontal) est accessible à des utilisateurs externes (couleur verte), tandis que le réseau du **back** ne l'est pas (couleur rouge).
 
 Cela signifie que la communication entre les services du **back** ne sont pas accessibles à un utilisateur externe pour des raisons de sécurité évidente.
