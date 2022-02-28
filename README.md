@@ -81,9 +81,16 @@ Comme tout **middleware** qui se respecte, se sont de bons candidats pour collec
 Au regard des nouvelles information que nous avons, voici le schéma final du projet :
 [![Project docs](img/project-synthese-architecture-archi-complet.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
-## Vision par service
+## Vision par service, effet waouh !
 
-Ne nous attardons pas sur la complexité du dernier schéma de la section précédente. Gardons simplement une vision par services afin de voir comment nous allons les manipuler via des urls :
+Surtout, nous vous attardez sur l'apparente complexité du dernier schéma de la section précédente car dans la réalité, l'utilisation de tous ces services se fait quasiment entièrement nativement sans avoir à coder réellement quoi que ce soit ! Tout est question de définitions.
+
+En soi, seul les 3 projets **Python** seront réellement approfondit et mériteront votre attention : 
+- l'API REST ;
+- Le worker celery ;
+- La dashboard.
+
+Mais avant de rentrer dans le détail de chaque projet, changeons de perspective et regardons simplement et unitairement chaque service en visualisant ce qu'ils ont à nous offrir via des urls :
 
 [![Project docs](img/services-urls.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
 
