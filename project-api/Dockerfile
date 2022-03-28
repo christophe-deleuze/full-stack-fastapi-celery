@@ -14,4 +14,4 @@ USER app
 
 EXPOSE 5000
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "5000", "--worker", "2"]
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "5000", "--worker", "2", "--loglevel", "info"]
