@@ -14,18 +14,18 @@ class Settings(BaseSettings):
 ## API Features
 
 - Produce celery tasks ;
-- Produce celery worflow ;
+- Produce celery workflow ;
 - Query PostgreSQL Database ;
 - Retrieve celery results synchronously and asynchronously;
 
-### What is usefull with this software architecture ?
+### What is useful with this software architecture ?
 
 - API and workers are separated (The API couldn't be overloaded easily this way) ;
-- Celery allow to distribute work by using canvas, which is usefull for heavy process ;
+- Celery allow to distribute work by using canvas, which is useful for heavy process ;
 - Celery (through rabbitMQ) is connected to prometheus, which enable to autoscale workers on queue length ;
 - Celery is helpful to distribute heavy process or launch background tasks.
 
-### What is paintfull with this software architecture ?
+### What is painful with this software architecture ?
 
 - Celery is not optimized for small job.
 
@@ -51,28 +51,28 @@ The Celery worker project is dedicated to process tasks.
 - Isolate queue = Isolate project ;
 - You could use prometheus and rabbitMQ metrics exporter to manage auto-scaling on queue length.
 """
-    
+
     # CORS_ALLOW_ORIGINS is a JSON-formatted list of origins
     # e.g: ["http://localhost", "http://localhost:4200", "http://localhost:3000", "http://localhost:8080"]
     CORS_ALLOW_ORIGINS: List[AnyHttpUrl] = []
-    
+
     # Postgres common parameters
     POSTGRES_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@127.0.0.1/postgres"
-    
+
     # Celery timeout for every task and other defaults parameters
-    CELERY_TASK_READY_TIME_OUT: float = 360.0 # sec
-    CELERY_TASK_RESULT_TIME_OUT: float = 0.5 # sec
+    CELERY_TASK_READY_TIME_OUT: float = 360.0  # sec
+    CELERY_TASK_RESULT_TIME_OUT: float = 0.5  # sec
     CELERY_STANDARD_SERIALIZER: str = 'json'
-    
+
     # Celery parameters
     CELERY_BROKER_URL: str = 'pyamqp://guest:guest@127.0.0.1:5672//'
     CELERY_RESULT_BACKEND_URL: str = 'redis://127.0.0.1:6379/0'
     CELERY_SEND_TASK_RETRY: bool = True
-    CELERY_SEND_TASK_RETRY_POLICY: dict = {"max_retries":3, "interval_start":3, "interval_step":1, "interval_max":6}
-    
+    CELERY_SEND_TASK_RETRY_POLICY: dict = {"max_retries": 3, "interval_start": 3, "interval_step": 1, "interval_max": 6}
+
     # project-worker config
     PROJECT_WORKER_QUEUE = "project-worker"
-    
+
     @validator("CORS_ALLOW_ORIGINS", pre=True)
     def assemble_cors_allow_origins(cls, v: str | List[str]) -> str | List[str]:
         if isinstance(v, str) and not v.startswith("["):

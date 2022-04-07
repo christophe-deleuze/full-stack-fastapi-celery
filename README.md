@@ -57,7 +57,7 @@ Implicitement, cela induit le fait que chaque service doit fournir des informati
 La solution retenue dans notre projet consiste donc à utiliser une base de données spécialisée dans la collecte de métriques (`Prometheus`) et un outil (`Grafana`) pour visualiser en quasi temps réel les métriques qu'elle collecte.
 La collecte des métriques par `Prometheus` se fait à l'aide de requêtes **HTTP** sur des endpoints `/metrics`. Ainsi, pour fournie des données à `Prometheus`, chaque service doit pouvoir répondre à une requête **HTTP** de type **GET** sur l'endpoint `/metrics`.
 
-Pour l'**API** REST, rien de compliqué, il suffit d'ajouter un endpoint `/metrics` à celle-ci. Pour la base de donnée, comme elle ne sait pas nativement gérer des requêtes **HTTP**, il faudra faire appel à un service intermédiaire qui va collecter des métriques et les mettres à disposition de `Prometheus`. Ce type de service est appelé **exporter**.
+Pour l'**API** REST, rien de compliqué, il suffit d'ajouter un endpoint `/metrics` à celle-ci. Pour la base de donnée, comme elle ne sait pas nativement gérer des requêtes **HTTP**, il faudra faire appel à un service intermédiaire qui va collecter des métriques et les mettre à disposition de `Prometheus`. Ce type de service est appelé **exporter**.
 
 Mettons à jour le schéma :
 [![Project docs](img/project-synthese-architecture-simplifiee-administree-monitoree-partiellement.png)](https://github.com/christophe-deleuze/full-stack-fastapi-celery)
@@ -74,7 +74,7 @@ La discussion entre les **producers** et les **workers** nécessite deux interm�
 - Le **broker** (messager) qui passe des messages entre les **producers** et **workers**;
 - Le **result backend** (mémoire cache distribuée) qui stocke temporairement les résultats des tâches traitées par les **workers** le temps que les **producers** les récupèrent.
 
-Comme le **broker** et le **result backend** sont des intermédiaires entre des **producers** et des **workers**, on dit que se sont des **middlewares**.
+Comme le **broker** et le **result backend** sont des intermédiaires entre des **producers** et des **workers**, on dit que ce sont des **middlewares**.
 
 Comme tout **middleware** qui se respecte, se sont de bons candidats pour collecter des métriques. Combiné au Framework `Celery`, un outil de monitoring de tâche comme `Flower` apporte un vrai confort pour garder un oeil sur les services distribués.
  
@@ -85,7 +85,7 @@ Au regard des nouvelles information que nous avons, voici le schéma final du pr
 
 Surtout, nous vous attardez sur l'apparente complexité du dernier schéma de la section précédente car dans la réalité, l'utilisation de tous ces services se fait quasiment entièrement nativement sans avoir à coder réellement quoi que ce soit ! Tout est question de définitions.
 
-En soi, seul les 3 projets **Python** seront réellement approfondit et mériteront votre attention : 
+En soi, seul les 3 projets **Python** seront réellement approfondi et mériteront votre attention : 
 - l'API REST ;
 - Le worker celery ;
 - La dashboard.
@@ -248,7 +248,7 @@ services:
 #### Les `volumes` :
 
 - les données des bases de données sont persistées pour être représentatif de ce que vous auriez en production ;
-- Les données des middleware (RabbitMQ & Redis) ne sont pas persitées, mais elle pourraient l'être.
+- Les données des middlewares (RabbitMQ & Redis) ne sont pas persitées, mais elle pourraient l'être.
 
 #### Les `networks` :
 
